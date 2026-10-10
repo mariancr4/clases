@@ -1,0 +1,84 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "teachers": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid"
+      }
+    },
+    "lessons": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid && root.child('teachers').child($uid).val() === true",
+        ".write": "auth != null && auth.uid === $uid && root.child('teachers').child($uid).val() === true"
+      }
+    },
+    "slides": {
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid && root.child('teachers').child($uid).val() === true",
+        "$lessonId": {
+          ".read": "auth != null && (auth.token.email_verified === true && auth.token.email.matches(/.*@nervion\\.salesianas\\.org$/) || auth.uid === $uid)"
+        }
+      }
+    },
+    "teacherSessions": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid && root.child('teachers').child($uid).val() === true",
+        ".indexOn": [
+          "createdAt"
+        ]
+      }
+    },
+    "sessions": {
+      "$code": {
+        ".read": "auth != null && (auth.token.email_verified === true && auth.token.email.matches(/.*@nervion\\.salesianas\\.org$/) || root.child('teachers').child(auth.uid).val() === true)",
+        ".write": "auth != null && root.child('teachers').child(auth.uid).val() === true && (!data.exists() || data.child('owner').val() === auth.uid) && (!newData.exists() || newData.child('owner').val() === auth.uid)"
+      }
+    },
+    "roster": {
+      "$code": {
+        ".read": "auth != null && root.child('sessions').child($code).child('owner').val() === auth.uid",
+        ".write": "auth != null && root.child('sessions').child($code).child('owner').val() === auth.uid",
+        "$uid": {
+          ".read": "auth != null && auth.uid === $uid",
+          ".write": "auth != null && auth.uid === $uid && auth.token.email_verified === true && auth.token.email.matches(/.*@nervion\\.salesianas\\.org$/) && root.child('sessions').child($code).exists() && !root.child('sessions').child($code).child('endedAt').exists()",
+          "alias": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 60"
+          },
+          "awayCount": {
+            ".validate": "newData.isNumber()"
+          },
+          "online": {
+            ".validate": "newData.isBoolean()"
+          },
+          "away": {
+            ".validate": "newData.isBoolean()"
+          },
+          "email": {
+            ".validate": "newData.isString() && newData.val() === auth.token.email.toLowerCase()"
+          }
+        }
+      }
+    },
+    "responses": {
+      "$code": {
+        ".read": "auth != null && root.child('sessions').child($code).child('owner').val() === auth.uid",
+        ".write": "auth != null && root.child('sessions').child($code).child('owner').val() === auth.uid",
+        "$itemId": {
+          "$uid": {
+            ".read": "auth != null && auth.uid === $uid",
+            ".write": "auth != null && auth.uid === $uid && auth.token.email_verified === true && auth.token.email.matches(/.*@nervion\\.salesianas\\.org$/) && root.child('sessions').child($code).child('state/item/id').val() === $itemId && root.child('sessions').child($code).child('state/open').val() === true && !root.child('sessions').child($code).child('endedAt').exists() && root.child('roster').child($code).child($uid).exists()",
+            ".validate": "newData.hasChildren(['value', 'at', 'alias'])",
+            "alias": {
+              ".validate": "newData.isString() && newData.val().length <= 60"
+            },
+            "value": {
+              ".validate": "!newData.isString() || newData.val().length < 400000"
+            }
+          }
+        }
+      }
+    }
+  }
+}
